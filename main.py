@@ -5,7 +5,7 @@ from pathlib import Path
 import os
 import argparse
 import matplotlib.pyplot as plot
-import pandas as pd
+import dask.dataframe as dd
 
 lpb_channel_mapping = {
     "adc1.chan0": "TM2",
@@ -18,22 +18,22 @@ lpb_channel_mapping = {
     "adc2.chan3": "PT3"
 }
 adv_channel_mapping = {
-    "chan0": "TM1",
-    "chan1": "TM2",
-    "chan2": "TM3",
-    "chan3": "TM4",
-    "chan4": "TM5",
-    "chan5": "TM6",
-    "chan6": "TM7",
-    "chan7": "TM8",
-    "chan8": "TM9",
-    "chan9": "TM10",
-    "chan10": "TM11",
-    "chan11": "TM12",
-    "chan12": "TM13",
-    "chan13": "TM14",
-    "chan14": "TM15",
-    "chan15": "TM16"
+    "usb4716.chan0": "IFM",
+    "usb4716.chan1": "ETM-16",
+    "usb4716.chan2": "ETM-17",
+    "usb4716.chan3": "TM4",
+    "usb4716.chan4": "TM5",
+    "usb4716.chan5": "TM6",
+    "usb4716.chan6": "TM7",
+    "usb4716.chan7": "TM8",
+    "usb4716.chan8": "TM9",
+    "usb4716.chan9": "TM10",
+    "usb4716.chan10": "TM11",
+    "usb4716.chan11": "TM12",
+    "usb4716.chan12": "TM13",
+    "usb4716.chan13": "TM14",
+    "usb4716.chan14": "TM15",
+    "usb4716.chan15": "TM16"
 }
 def json_to_csv(json_data, csv_path):
     with (
@@ -50,14 +50,14 @@ def json_to_csv(json_data, csv_path):
         ]
         adv_fieldnames = [
             "header.origin", "header.timestamp_epoch", "header.timestamp_human", "header.counter",
-            "data.usb4716.chan0.raw", "data.usb4716.chan0.scaled", "data.usb4716.chan1.raw", "data.usb4716.chan1.scaled",
-            "data.usb4716.chan2.raw", "data.usb4716.chan2.scaled", "data.usb4716.chan3.raw", "data.usb4716.chan3.scaled",
-            "data.usb4716.chan4.raw", "data.usb4716.chan4.scaled", "data.usb4716.chan5.raw", "data.usb4716.chan5.scaled",
-            "data.usb4716.chan6.raw", "data.usb4716.chan6.scaled", "data.usb4716.chan7.raw", "data.usb4716.chan7.scaled",
-            "data.usb4716.chan8.raw", "data.usb4716.chan8.scaled", "data.usb4716.chan9.raw", "data.usb4716.chan9.scaled",
-            "data.usb4716.chan10.raw", "data.usb4716.chan10.scaled", "data.usb4716.chan11.raw", "data.usb4716.chan11.scaled",
-            "data.usb4716.chan12.raw","data.usb4716.chan12.scaled", "data.usb4716.chan13.raw", "data.usb4716.chan13.scaled",
-            "data.usb4716.chan14.raw", "data.usb4716.chan14.scaled","data.usb4716.chan15.raw", "data.usb4716.chan15.scaled",
+            "data.IFM.scaled", "data.ETM-16.scaled",
+            "data.ETM-17.scaled", "data.TM4.scaled",
+            "data.TM5.scaled", "data.TM6.scaled",
+            "data.TM7.scaled", "data.TM8.scaled",
+            "data.TM9.scaled", "data.TM10.scaled",
+            "data.TM11.scaled", "data.TM12.scaled",
+            "data.TM13.scaled", "data.TM14.scaled",
+            "data.TM15.scaled", "data.TM16.scaled",
             "data.cpu_temperature"
         ]
         #LPB initialization
@@ -66,9 +66,9 @@ def json_to_csv(json_data, csv_path):
         last_known_values_lpb = {field: 0 for field in lpb_fieldnames}
         lpb_counter = 0
         #ADV initialization
-        writer_adv = csv.DictWriter(adv_csv, fieldnames=lpb_fieldnames)
+        writer_adv = csv.DictWriter(adv_csv, fieldnames=adv_fieldnames)
         writer_adv.writeheader()
-        last_known_values_adv = {field: 0 for field in lpb_fieldnames}
+        last_known_values_adv = {field: 0 for field in adv_fieldnames}
         adv_counter = 0
 
         for record in json_data:
@@ -157,15 +157,8 @@ def json_to_csv(json_data, csv_path):
                             channel_label = adv_channel_mapping.get(full_channel_name)
 
                             if channel_label:
-                                raw_column = f"data.{channel_label}.raw"
                                 scaled_column = f"data.{channel_label}.scaled"
-
-                                if "raw" in channel_data:
-                                    last_known_values_adv[raw_column] = channel_data["raw"]
-                                if "scaled" in channel_data:
-                                    last_known_values_adv[scaled_column] = channel_data["scaled"]
-
-                                row_data[raw_column] = last_known_values_adv[raw_column]
+                                last_known_values_adv[scaled_column] = channel_data.get("scaled", last_known_values_adv[scaled_column])
                                 row_data[scaled_column] = last_known_values_adv[scaled_column]
 
                     for field in adv_fieldnames:
@@ -175,21 +168,31 @@ def json_to_csv(json_data, csv_path):
                     writer_adv.writerow(row_data)
                     adv_counter += 1
                 case _:
-                    print("dupeczka")
                     continue
 
 def plot_from_csv(csv_path, source, plot_channels, plots_folder_path, counter):
-    data = pd.read_csv(f"{csv_path}_{source}.csv")
-    if not data.empty:
-        start_time = data["header.timestamp_epoch"].iloc[0] / 1000
+    print(f"start {csv_path}")
+    data = dd.read_csv(csv_path, assume_missing=True)
+    print(f"done")
+    if data.shape[0].compute() > 0:
+        start_time = (data["header.timestamp_epoch"] / 1000).min().compute()
+        time_in_seconds = ((data["header.timestamp_epoch"] / 1000) - start_time).compute()
+
+        selected_columns = ["header.timestamp_epoch"] + [f"data.{channel}.scaled" for channel in plot_channels]
+        filtered_data = data[selected_columns].compute()
+
         plot.figure(figsize=(10, 5))
         for channel in plot_channels:
-            if f"data.{channel}.scaled" in data.columns:
-                time_in_seconds = (data["header.timestamp_epoch"] / 1000) - start_time
-                plot.plot(time_in_seconds, data[f"data.{channel}.scaled"], label=f"{channel}_scaled")
+            column_name = f"data.{channel}.scaled"
+            if column_name in filtered_data.columns:
+                plot.plot(
+                    time_in_seconds,
+                    filtered_data[column_name],
+                    label=f"{channel}_scaled"
+                )
         plot.xlabel("Time [ms]")
         plot.ylabel("Scaled Values")
-        plot.title("Plot of Scaled Values")
+        plot.title(f"Plot of Scaled Values ({source})")
         plot.legend()
         plot.grid(True)
         plot.tight_layout()
@@ -197,10 +200,26 @@ def plot_from_csv(csv_path, source, plot_channels, plots_folder_path, counter):
         plot.savefig(plot_filename)
         plot.show()
 
+def plot_all_csv_files(input_folder, plots_folder_path, plot_channels):
+    csv_files = [f for f in os.listdir(input_folder) if f.endswith(".csv")]
+    csv_counter = 1
+
+    for csv_file in csv_files:
+        if "lpb" in csv_file:
+            source = "lpb"
+        elif "adv" in csv_file:
+            source = "adv"
+        else:
+            continue
+
+        csv_path = os.path.join(input_folder, csv_file)
+        plot_from_csv(csv_path, source, plot_channels[source], plots_folder_path, csv_counter)
+        csv_counter += 1
+
 def main(input_folder=".", output_folder="output"):
     #PLOTING THEESE
     plot_channels = {"lpb": ["TM1", "TM2", "PT1", "PT2", "PT4"],
-                     "adv": ["TM1", "TM15"]}
+                     "adv": ["IFM", "ETM-16", "ETM-17"]}
     #PLOTING THEESE
     os.makedirs(output_folder, exist_ok=True)
     plots_folder_path = os.path.join(output_folder, "plots")
@@ -216,9 +235,10 @@ def main(input_folder=".", output_folder="output"):
             with open(json_path, 'r', encoding='utf-8') as json_file:
                 json_data = json.load(json_file)
             json_to_csv(json_data, csv_output_path)
-            [print(source, plot_channels[source]) for source in plot_channels]
-            [plot_from_csv(csv_output_path, source, plot_channels[source], plots_folder_path, csv_counter) for source in plot_channels]
-            csv_counter += 1
+
+    plot_all_csv_files(output_folder, plots_folder_path, plot_channels)
+
+
 
 
 if __name__ == "__main__":
