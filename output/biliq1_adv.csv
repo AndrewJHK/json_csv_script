@@ -1,1 +1,0 @@
-header.origin,header.timestamp_epoch,header.timestamp_human,header.counter,data.TM1.raw,data.TM1.scaled,data.TM2.raw,data.TM2.scaled,data.PT1.raw,data.PT1.scaled,data.PT2.raw,data.PT2.scaled,data.PT3.raw,data.PT3.scaled,data.PT4.raw,data.PT4.scaled,data.PT5.raw,data.PT5.scaled,data.PT6.raw,data.PT6.scaled,data.cpu_temperature
