@@ -1,0 +1,8 @@
+adc1.chan0 -> TM2
+adc1.chan1 -> PT2
+adc1.chan2 -> PT1
+adc1.chan3 -> TM1
+adc2.chan0 -> PT5
+adc2.chan1 -> PT6
+adc2.chan2 -> PT4
+adc2.chan3 -> PT3
