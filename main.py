@@ -171,16 +171,13 @@ def json_to_csv(json_data, csv_path):
                     continue
 
 def plot_from_csv(csv_path, source, plot_channels, plots_folder_path, counter):
-    print(f"start {csv_path}")
     data = dd.read_csv(csv_path, assume_missing=True)
-    print(f"done")
     if data.shape[0].compute() > 0:
         start_time = (data["header.timestamp_epoch"] / 1000).min().compute()
         time_in_seconds = ((data["header.timestamp_epoch"] / 1000) - start_time).compute()
 
         selected_columns = ["header.timestamp_epoch"] + [f"data.{channel}.scaled" for channel in plot_channels]
         filtered_data = data[selected_columns].compute()
-
         plot.figure(figsize=(10, 5))
         for channel in plot_channels:
             column_name = f"data.{channel}.scaled"
@@ -199,6 +196,7 @@ def plot_from_csv(csv_path, source, plot_channels, plots_folder_path, counter):
         plot_filename = os.path.join(plots_folder_path, f"{source}_output_scaled_plot{counter}.png")
         plot.savefig(plot_filename)
         plot.show()
+
 
 def plot_all_csv_files(input_folder, plots_folder_path, plot_channels):
     csv_files = [f for f in os.listdir(input_folder) if f.endswith(".csv")]
