@@ -36,6 +36,14 @@ adv_channel_mapping = {
     "usb4716.chan15": "TM16"
 }
 def json_to_csv(json_data, csv_path):
+    def get_timestamp(record):
+        timestamp_data = record["header"].get("timestamp", {})
+        low = timestamp_data.get("low", 0)
+        high = timestamp_data.get("high", 0)
+        return (high * (2 ** 32)) + low
+
+    sorted_data = sorted(json_data, key=get_timestamp)
+
     with (
         open(f"{csv_path}_lpb.csv", mode='w', newline='') as lpb_csv,
         open(f"{csv_path}_adv.csv", mode='w', newline='') as adv_csv
@@ -71,7 +79,7 @@ def json_to_csv(json_data, csv_path):
         last_known_values_adv = {field: 0 for field in adv_fieldnames}
         adv_counter = 0
 
-        for record in json_data:
+        for record in sorted_data:
             match record["header"].get("origin"):
                 case 100:
                     origin = record["header"].get("origin", 0)
@@ -123,7 +131,6 @@ def json_to_csv(json_data, csv_path):
 
                     writer_lpb.writerow(row_data)
                     lpb_counter += 1
-######################################################################################################################
                 case 130:
                     origin = record["header"].get("origin", 0)
                     timestamp_data = record["header"].get("timestamp", {})
@@ -222,7 +229,6 @@ def main(input_folder=".", output_folder="output"):
     os.makedirs(output_folder, exist_ok=True)
     plots_folder_path = os.path.join(output_folder, "plots")
     os.makedirs(plots_folder_path, exist_ok=True)
-    csv_counter = 1
 
     for filename in os.listdir(input_folder):
         if filename.endswith(".json"):
