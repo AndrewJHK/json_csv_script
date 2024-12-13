@@ -35,7 +35,7 @@ adv_channel_mapping = {
     "usb4716.chan14": "TM15",
     "usb4716.chan15": "TM16"
 }
-def json_to_csv(json_data, csv_path):
+def json_to_csv(json_data, csv_path, fill_with_none=True):
     def get_timestamp(record):
         timestamp_data = record["header"].get("timestamp", {})
         low = timestamp_data.get("low", 0)
@@ -43,10 +43,19 @@ def json_to_csv(json_data, csv_path):
         return (high * (2 ** 32)) + low
 
     sorted_data = sorted(json_data, key=get_timestamp)
+    lpb_csv_path = None
+    adv_csv_path = None
+    match fill_with_none:
+        case True:
+            lpb_csv_path = f"{csv_path}_none_filled_lpb.csv"
+            adv_csv_path = f"{csv_path}_none_filled_adv.csv"
+        case False:
+            lpb_csv_path = f"{csv_path}_interpolated_lpb.csv"
+            adv_csv_path = f"{csv_path}_interpolated_adv.csv"
 
     with (
-        open(f"{csv_path}_lpb.csv", mode='w', newline='') as lpb_csv,
-        open(f"{csv_path}_adv.csv", mode='w', newline='') as adv_csv
+        open(lpb_csv_path, mode='w', newline='') as lpb_csv,
+        open(adv_csv_path, mode='w', newline='') as adv_csv
     ):
         lpb_fieldnames = [
             "header.origin", "header.timestamp_epoch", "header.timestamp_human", "header.counter",
@@ -71,12 +80,12 @@ def json_to_csv(json_data, csv_path):
         #LPB initialization
         writer_lpb = csv.DictWriter(lpb_csv, fieldnames=lpb_fieldnames)
         writer_lpb.writeheader()
-        last_known_values_lpb = {field: 0 for field in lpb_fieldnames}
+        last_known_values_lpb = {field: None for field in lpb_fieldnames}
         lpb_counter = 0
         #ADV initialization
         writer_adv = csv.DictWriter(adv_csv, fieldnames=adv_fieldnames)
         writer_adv.writeheader()
-        last_known_values_adv = {field: 0 for field in adv_fieldnames}
+        last_known_values_adv = {field: None for field in adv_fieldnames}
         adv_counter = 0
 
         for record in sorted_data:
@@ -127,7 +136,7 @@ def json_to_csv(json_data, csv_path):
 
                     for field in lpb_fieldnames:
                         if field not in row_data:
-                            row_data[field] = last_known_values_lpb[field]
+                            row_data[field] = last_known_values_lpb[field] if not fill_with_none else None
 
                     writer_lpb.writerow(row_data)
                     lpb_counter += 1
@@ -155,6 +164,7 @@ def json_to_csv(json_data, csv_path):
                     if cpu_temp_data:
                         last_known_values_adv["data.cpu_temperature"] = cpu_temp_data.get("value", 0)
                     row_data["data.cpu_temperature"] = last_known_values_adv["data.cpu_temperature"]
+
                     for field_key, channels in record["data"].items():
                         if field_key == "cpu_temperature":
                             continue
@@ -170,12 +180,25 @@ def json_to_csv(json_data, csv_path):
 
                     for field in adv_fieldnames:
                         if field not in row_data:
-                            row_data[field] = last_known_values_adv[field]
+                            row_data[field] = last_known_values_adv[field] if not fill_with_none else None
 
                     writer_adv.writerow(row_data)
                     adv_counter += 1
                 case _:
                     continue
+
+    for file_path in [lpb_csv_path, adv_csv_path]:
+        deletion = False
+        try:
+            with open(file_path, 'r', encoding='utf-8') as csv_file:
+                reader = csv.reader(csv_file)
+                rows = list(reader)
+                if len(rows) <= 1:
+                    deletion = True
+            if deletion:
+                os.remove(file_path)
+        except FileNotFoundError:
+            pass
 
 def plot_from_csv(csv_path, source, plot_channels, plots_folder_path, counter):
     data = dd.read_csv(csv_path, assume_missing=True)
@@ -221,7 +244,7 @@ def plot_all_csv_files(input_folder, plots_folder_path, plot_channels):
         plot_from_csv(csv_path, source, plot_channels[source], plots_folder_path, csv_counter)
         csv_counter += 1
 
-def main(input_folder=".", output_folder="output"):
+def main(input_folder=".", output_folder="output",fill_with_none=True):
     #PLOTING THEESE
     plot_channels = {"lpb": ["TM1", "TM2", "PT1", "PT2", "PT4"],
                      "adv": ["IFM", "ETM-16", "ETM-17"]}
@@ -238,8 +261,7 @@ def main(input_folder=".", output_folder="output"):
 
             with open(json_path, 'r', encoding='utf-8') as json_file:
                 json_data = json.load(json_file)
-            json_to_csv(json_data, csv_output_path)
-
+            json_to_csv(json_data, csv_output_path, fill_with_none)
     plot_all_csv_files(output_folder, plots_folder_path, plot_channels)
 
 
@@ -249,6 +271,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Convert JSON files to CSV in specified folders")
     parser.add_argument("--input_folder", type=str, default=".", help="Folder containing JSON files")
     parser.add_argument("--output_folder", type=str, default="output", help="Folder to save CSV files")
+
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--fill_with_none", dest="fill_with_none", action="store_true", help="Fill missing fields with None")
+    group.add_argument("--no_fill_with_none", dest="fill_with_none", action="store_false", help="Fill missing fields with last known values")
+    parser.set_defaults(fill_with_none=True)
     args = parser.parse_args()
 
-    main(input_folder=args.input_folder, output_folder=args.output_folder)
+    main(input_folder=args.input_folder, output_folder=args.output_folder, fill_with_none=args.fill_with_none)
