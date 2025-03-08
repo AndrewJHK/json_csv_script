@@ -18,10 +18,10 @@ lpb_channel_mapping = {
     "adc2.chan3": "PT3"
 }
 adv_channel_mapping = {
-    "usb4716.chan0": "IFM",
-    "usb4716.chan1": "ETM-16",
-    "usb4716.chan2": "ETM-17",
-    "usb4716.chan3": "TM4",
+    "usb4716.chan0": "N20_PRES",
+    "usb4716.chan1": "CHAMBER_PRES",
+    "usb4716.chan2": "N20",
+    "usb4716.chan3": "FUEL",
     "usb4716.chan4": "TM5",
     "usb4716.chan5": "TM6",
     "usb4716.chan6": "TM7",
@@ -67,8 +67,8 @@ def json_to_csv(json_data, csv_path, fill_with_none=True):
         ]
         adv_fieldnames = [
             "header.origin", "header.timestamp_epoch", "header.timestamp_human", "header.counter",
-            "data.IFM.scaled", "data.ETM-16.scaled",
-            "data.ETM-17.scaled", "data.TM4.scaled",
+            "data.N20_PRES.scaled", "data.CHAMBER_PRES.scaled",
+            "data.N20.scaled", "data.FUEL.scaled",
             "data.TM5.scaled", "data.TM6.scaled",
             "data.TM7.scaled", "data.TM8.scaled",
             "data.TM9.scaled", "data.TM10.scaled",
@@ -247,7 +247,7 @@ def plot_all_csv_files(input_folder, plots_folder_path, plot_channels):
 def main(input_folder=".", output_folder="output",fill_with_none=True):
     #PLOTING THEESE
     plot_channels = {"lpb": ["TM1", "TM2", "PT1", "PT2", "PT4"],
-                     "adv": ["IFM", "ETM-16", "ETM-17"]}
+                     "adv": ["N20_PRES", "N20", "FUEL"]}
     #PLOTING THEESE
     os.makedirs(output_folder, exist_ok=True)
     plots_folder_path = os.path.join(output_folder, "plots")
