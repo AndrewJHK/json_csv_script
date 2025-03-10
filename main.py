@@ -22,18 +22,18 @@ adv_channel_mapping = {
     "usb4716.chan1": "CHAMBER_PRES",
     "usb4716.chan2": "N20",
     "usb4716.chan3": "FUEL",
-    "usb4716.chan4": "TM5",
-    "usb4716.chan5": "TM6",
-    "usb4716.chan6": "TM7",
-    "usb4716.chan7": "TM8",
-    "usb4716.chan8": "TM9",
-    "usb4716.chan9": "TM10",
-    "usb4716.chan10": "TM11",
-    "usb4716.chan11": "TM12",
-    "usb4716.chan12": "TM13",
-    "usb4716.chan13": "TM14",
-    "usb4716.chan14": "TM15",
-    "usb4716.chan15": "TM16"
+    "usb4716.chan4": "CH4",
+    "usb4716.chan5": "CH5",
+    "usb4716.chan6": "CH6",
+    "usb4716.chan7": "CH7",
+    "usb4716.chan8": "CH8",
+    "usb4716.chan9": "CH9",
+    "usb4716.chan10": "CH10",
+    "usb4716.chan11": "CH11",
+    "usb4716.chan12": "CH12",
+    "usb4716.chan13": "CH13",
+    "usb4716.chan14": "CH14",
+    "usb4716.chan15": "CH15"
 }
 
 
@@ -71,12 +71,12 @@ def json_to_csv(json_data, csv_path, fill_with_none=True):
             "header.origin", "header.timestamp_epoch", "header.timestamp_human", "header.counter",
             "data.N20_PRES.scaled", "data.CHAMBER_PRES.scaled",
             "data.N20.scaled", "data.FUEL.scaled",
-            "data.TM5.scaled", "data.TM6.scaled",
-            "data.TM7.scaled", "data.TM8.scaled",
-            "data.TM9.scaled", "data.TM10.scaled",
-            "data.TM11.scaled", "data.TM12.scaled",
-            "data.TM13.scaled", "data.TM14.scaled",
-            "data.TM15.scaled", "data.TM16.scaled",
+            "data.CH4.scaled", "data.CH5.scaled",
+            "data.CH6.scaled", "data.CH7.scaled",
+            "data.CH8.scaled", "data.CH9.scaled",
+            "data.CH10.scaled", "data.CH11.scaled",
+            "data.CH12.scaled", "data.CH13.scaled",
+            "data.CH14.scaled", "data.CH15.scaled",
             "data.cpu_temperature"
         ]
         # LPB initialization
@@ -252,7 +252,7 @@ def plot_all_csv_files(input_folder, plots_folder_path, plot_channels):
 def main(input_folder=".", output_folder="output", fill_with_none=True):
     # PLOTING THEESE
     plot_channels = {"lpb": ["TM1", "TM2", "PT1", "PT2", "PT4"],
-                     "adv": ["N20_PRES", "N20", "FUEL"]}
+                     "adv": ["CH14"]}
     # PLOTING THEESE
     os.makedirs(output_folder, exist_ok=True)
     plots_folder_path = os.path.join(output_folder, "plots")
