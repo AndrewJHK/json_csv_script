@@ -176,9 +176,15 @@ def json_to_csv(json_data, csv_path, fill_with_none=True):
                             channel_label = adv_channel_mapping.get(full_channel_name)
 
                             if channel_label:
+                                raw_column = f"data.{channel_label}.raw"
                                 scaled_column = f"data.{channel_label}.scaled"
-                                last_known_values_adv[scaled_column] = channel_data.get("scaled", last_known_values_adv[
-                                    scaled_column])
+
+                                if "raw" in channel_data:
+                                    last_known_values_adv[raw_column] = channel_data["raw"]
+                                if "scaled" in channel_data:
+                                    last_known_values_adv[scaled_column] = channel_data["scaled"]
+
+                                row_data[raw_column] = last_known_values_adv[raw_column]
                                 row_data[scaled_column] = last_known_values_adv[scaled_column]
 
                     for field in adv_fieldnames:
