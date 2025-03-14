@@ -210,7 +210,7 @@ def json_to_csv(json_data, csv_path, fill_with_none=True):
             pass
 
 
-def plot_from_csv(csv_path, source, plot_channels, plots_folder_path, counter):
+def plot_from_csv(csv_path, source, plot_channels, plots_folder_path, counter, plot_type="line"):
     data = dd.read_csv(csv_path, assume_missing=True)
     if data.shape[0].compute() > 0:
         start_time = (data["header.timestamp_epoch"] / 1000).min().compute()
@@ -222,14 +222,13 @@ def plot_from_csv(csv_path, source, plot_channels, plots_folder_path, counter):
         for channel in plot_channels:
             column_name = f"data.{channel}.scaled"
             if column_name in filtered_data.columns:
-                plot.plot(
-                    time_in_seconds,
-                    filtered_data[column_name],
-                    label=f"{channel}_scaled"
-                )
+                if plot_type == "scatter":
+                    plot.scatter(time_in_seconds, filtered_data[column_name], label=f"{channel}_scaled", alpha=0.7, s=5)
+                else:
+                    plot.plot(time_in_seconds, filtered_data[column_name], label=f"{channel}_scaled")
         plot.xlabel("Time [ms]")
         plot.ylabel("Scaled Values")
-        plot.title(f"Plot of Scaled Values ({source})")
+        plot.title(f"{plot_type.capitalize()} Plot of Scaled Values ({source})")
         plot.legend()
         plot.grid(True)
         plot.tight_layout()
@@ -238,7 +237,7 @@ def plot_from_csv(csv_path, source, plot_channels, plots_folder_path, counter):
         plot.show()
 
 
-def plot_all_csv_files(input_folder, plots_folder_path, plot_channels):
+def plot_all_csv_files(input_folder, plots_folder_path, plot_channels, plot_type):
     csv_files = [f for f in os.listdir(input_folder) if f.endswith(".csv")]
     csv_counter = 1
 
@@ -251,14 +250,15 @@ def plot_all_csv_files(input_folder, plots_folder_path, plot_channels):
             continue
 
         csv_path = os.path.join(input_folder, csv_file)
-        plot_from_csv(csv_path, source, plot_channels[source], plots_folder_path, csv_counter)
+        plot_from_csv(csv_path, source, plot_channels[source], plots_folder_path, csv_counter, plot_type)
         csv_counter += 1
 
 
-def main(input_folder=".", output_folder="output", fill_with_none=True):
+def main(input_folder=".", output_folder="output", fill_with_none=True, plot_type="line"):
     # PLOTING THEESE
     plot_channels = {"lpb": ["TM1", "TM2", "PT1", "PT2", "PT4"],
-                     "adv": ["CH14"]}
+                     "adv": ["N20_PRES",
+                             "N20", "FUEL"]}
     # PLOTING THEESE
     os.makedirs(output_folder, exist_ok=True)
     plots_folder_path = os.path.join(output_folder, "plots")
@@ -273,7 +273,7 @@ def main(input_folder=".", output_folder="output", fill_with_none=True):
             with open(json_path, 'r', encoding='utf-8') as json_file:
                 json_data = json.load(json_file)
             json_to_csv(json_data, csv_output_path, fill_with_none)
-    plot_all_csv_files(output_folder, plots_folder_path, plot_channels)
+    plot_all_csv_files(output_folder, plots_folder_path, plot_channels, plot_type)
 
 
 if __name__ == "__main__":
@@ -286,7 +286,9 @@ if __name__ == "__main__":
                        help="Fill missing fields with None")
     group.add_argument("--no_fill_with_none", dest="fill_with_none", action="store_false",
                        help="Fill missing fields with last known values")
+    parser.add_argument("--plot_type", type=str, choices=["line", "scatter"], default="line",
+                        help="Choose plot type: 'line' or 'scatter'")
     parser.set_defaults(fill_with_none=True)
     args = parser.parse_args()
 
-    main(input_folder=args.input_folder, output_folder=args.output_folder, fill_with_none=args.fill_with_none)
+    main(input_folder=args.input_folder, output_folder=args.output_folder, fill_with_none=args.fill_with_none, plot_type=args.plot_type)
